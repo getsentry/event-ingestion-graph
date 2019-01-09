@@ -3,7 +3,7 @@ body {
   margin: 0 auto;
   color: #333;
   font-weight: 300;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serf;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serf;
 }
 
 h1 {
@@ -32,7 +32,7 @@ svg {
 
 text {
   font-weight: 300;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serf;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serf;
   font-size: 14px;
 }
 
