@@ -28,6 +28,7 @@ svg {
   border: 1px solid #ccc;
   overflow: hidden;
   margin: 0 auto;
+  background-image: url('../img/sentry-pattern-transp.png');
 }
 
 text {
