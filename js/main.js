@@ -120,7 +120,7 @@ const edges = [
     from: 'task-preprocess-event',
     to: 'task-process-event',
     options: {
-      label: '    Start task',
+      label: ' Start task',
       description: `
         Source:
         <a href="https://github.com/getsentry/sentry/blob/37eb11f6b050fd019375002aed4cf1d8dff2b117/src/sentry/tasks/store.py#L78">Scheduling "process_event"</a>
@@ -129,10 +129,14 @@ const edges = [
     },
   },
   {
+    from: 'task-preprocess-event',
+    to: 'task-save-event',
+  },
+  {
     from: 'task-process-event',
     to: 'task-save-event',
     options: {
-      label: '   Start task',
+      label: 'Start task',
       description: `
         Source:
         <a href="https://github.com/getsentry/sentry/blob/37eb11f6b050fd019375002aed4cf1d8dff2b117/src/sentry/tasks/store.py#L193">Scheduling "save_event"</a>
@@ -160,7 +164,9 @@ const edges = [
   {
     from: 'redis-buffers',
     to: 'task-process-event',
-    options: {styles: ['redis-buffers-flow']},
+    options: {
+      styles: ['redis-buffers-flow'],
+    },
   },
   {
     from: 'redis-buffers',
@@ -229,7 +235,6 @@ function prepareElements(g) {
   // Add states to the graph, set labels, and style
   Object.keys(states).forEach(function(state) {
     const value = states[state];
-    // value.label = state;
     value.rx = value.ry = 5;
     if (value.styles && value.styles.length > 0) {
       value.class = value.styles.join(' ');
@@ -277,11 +282,12 @@ function addTooltips(inner, g) {
   // Add tooltips for edges
   inner
     .selectAll('g.edgeLabel')
-    .attr('title', v => {
-      const edge = g.edge(v);
+    .attr('title', e => {
+      const edge = g.edge(e);
+
       return styleTooltip(edge.label.trim(), edge.description || '');
     })
-    .each(function(v) {
+    .each(function(e) {
       $(this).tipsy(tooltipOptions);
     });
 }
