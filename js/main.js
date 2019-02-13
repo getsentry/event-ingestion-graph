@@ -51,10 +51,11 @@ const states = {
     styles: ['comp-database'],
   },
   'redis-buffers': {
-    label: 'Buffers (Redis)',
+    label: 'Redis Cache',
     description: `
       This cache is used to pass data between event processing stages. <br>
-      It is powered by <a href="https://github.com/getsentry/rb">RB</a> (Redis Blaster), and is not HA (Highly Available).
+      It is powered by <a href="https://github.com/getsentry/rb">RB</a> (Redis Blaster), and is not HA (Highly Available). <br><br>
+      This compenent is also known as <i>buffers</i> (in the infrastructure), and <i>default_cache</i> (in the code).
     `,
     styles: ['comp-redis'],
   },
