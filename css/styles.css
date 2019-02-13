@@ -105,3 +105,8 @@ text {
 .redis-buffers-flow path {
   stroke-dasharray: 8, 4;
 }
+
+/* Embedded */
+body.embedded {
+  width: unset;
+}
