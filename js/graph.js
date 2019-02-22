@@ -73,9 +73,9 @@ const states = {
     writing those events in batches to ClickHouse, the database powering Snuba.
     `,
   },
-  'worker-relay': {
+  'post-process-forwarder': {
     description: `
-    <i>worker-relay</i> is responsible for waiting on snuba-consumer to commit writes to ClickHouse,
+    <i>post-process-forwarder</i> is responsible for waiting on snuba-consumer to commit writes to ClickHouse,
     and subsequently fire off the post_process_group job to Celery.
     `,
   },
@@ -208,7 +208,7 @@ const edges = [
   },
   {
     from: 'snuba-consumer',
-    to: 'worker-relay',
+    to: 'post-process-forwarder',
     options: {
       styles: ['main-flow'],
     },
@@ -218,7 +218,7 @@ const edges = [
     to: 'database-clickhouse',
   },
   {
-    from: 'worker-relay',
+    from: 'post-process-forwarder',
     to: 'task-post-process-group',
     options: {
       styles: ['main-flow'],
