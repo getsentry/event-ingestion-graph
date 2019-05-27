@@ -42,12 +42,13 @@ const states = {
   `,
     styles: ['comp-celery-task'],
   },
+  'service-symbolicator': {label: 'Symbolicator'},
   'task-save-event': {
     label: 'Task: save_event',
     styles: ['comp-celery-task'],
   },
   'storage-nodestore': {
-    label: 'Nodestore (Riak)',
+    label: 'Nodestore (Google Bigtable)',
     styles: ['comp-database'],
   },
   'redis-buffers': {
@@ -130,6 +131,17 @@ const edges = [
     },
   },
   {
+    from: 'task-process-event',
+    to: 'service-symbolicator',
+    options: {
+      label: 'Native symbolication',
+      description: `
+        Minidumps and native stack traces are sent to the Symbolicator service.
+      `,
+      labelpos: 'l',
+    },
+  },
+  {
     from: 'task-preprocess-event',
     to: 'task-save-event',
   },
@@ -137,7 +149,7 @@ const edges = [
     from: 'task-process-event',
     to: 'task-save-event',
     options: {
-      label: 'Start task',
+      label: '  Start task',
       description: `
         Source:
         <a href="https://github.com/getsentry/sentry/blob/37eb11f6b050fd019375002aed4cf1d8dff2b117/src/sentry/tasks/store.py#L193">Scheduling "save_event"</a>
@@ -178,7 +190,8 @@ const edges = [
     from: 'task-save-event',
     to: 'kafka-eventstream',
     options: {
-      label: `Publish to "events" topic`,
+      labelpos: 'c',
+      label: 'Publish to "events" topic                                    ',
       styles: ['main-flow'],
     },
   },
@@ -186,14 +199,15 @@ const edges = [
     from: 'task-save-event',
     to: 'storage-nodestore',
     options: {
-      label: '         Save event payload',
+      label: 'Save event payload',
     },
   },
   {
     from: 'task-save-event',
     to: 'database-postgres',
     options: {
-      label: 'Save to DB',
+      labelpos: 'c',
+      label: '               Save to DB',
       description: `Source: <a href="https://github.com/getsentry/sentry/blob/37eb11f6b050fd019375002aed4cf1d8dff2b117/src/sentry/event_manager.py#L1112">Saving to database</a>`,
     },
   },
@@ -295,8 +309,10 @@ function addTooltips(inner, g) {
 
 function initGraph() {
   // Create a new directed graph
-  const g = new dagreD3.graphlib.Graph().setGraph({});
-
+  const g = new dagreD3.graphlib.Graph().setGraph({
+    rankdir: 'TB',
+    acyclicer: 'tight-tree',
+  });
   prepareElements(g);
 
   // Create the renderer
