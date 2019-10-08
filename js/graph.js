@@ -5,6 +5,32 @@ const states = {
     description: 'Clients that use Sentry SDKs',
     styles: ['comp-outer'],
   },
+  'relay': {
+    label: 'Relay (semaphore)',
+    description: `
+    Beginning of new path for event processing (alternative to "web worker (uwsgi)").
+
+    Processes incoming requests. Immediately returns a 200 or 429. Queues
+    events in-memory <i>afterwards</i>, and does some basic checks:<br><br>
+
+    <ul>
+      <li>Rate limits <a href="https://github.com/getsentry/semaphore/blob/ccacf2c343fc845107a34115d9d4839ad1b0afa5/server/src/quotas/redis.rs">(code)</a></li>
+      <li>Event filtering <a href="https://github.com/getsentry/semaphore/tree/ccacf2c343fc845107a34115d9d4839ad1b0afa5/general/src/filter">(code)</a></li>
+      <li>
+        Schema validation/event normalization (code for
+        <a href="https://github.com/getsentry/semaphore/tree/ccacf2c343fc845107a34115d9d4839ad1b0afa5/general/src/protocol">schema definition</a>,
+        <a href="https://github.com/getsentry/semaphore/tree/ccacf2c343fc845107a34115d9d4839ad1b0afa5/general/src/store">store-specific normalization</a>)
+      </li>
+    </ul>
+    `
+  },
+  'kafka-ingest-stream': {
+    label: 'Kafka Ingest Stream',
+    styles: ['comp-kafka'],
+  },
+  'ingest-consumer': {
+    description: 'responsible for consuming processed events from Relay. Runs <code>preprocess_event</code> synchronously (not as Celery task, but as function call)'
+  },
   'web-worker': {
     label: 'Web worker (uwsgi)',
     description: `
@@ -93,6 +119,45 @@ const states = {
 const edges = [
   {
     from: 'outer-space',
+    to: 'relay',
+    options: {
+      label: 'Raw event data',
+      description: `
+        The data looks like this: <br>
+        <pre>{"exception":{"values":[{"stacktrace":{"frames":
+[{"colno":"12","filename":"http://test.com/f.js",
+"function":"?","in_app":true,"lineno":13}]},"type":
+"SyntaxError","value":"Use of const in strict mode." ...</pre>
+      `,
+      styles: ['main-flow'],
+    },
+  },
+  {
+    from: 'relay',
+    to: 'kafka-ingest-stream',
+    options: {
+      label: 'Publish to "ingest-events" topic',
+      styles: ['main-flow'],
+    },
+  },
+  {
+    from: 'kafka-ingest-stream',
+    to: 'ingest-consumer',
+    options: {
+      styles: ['main-flow'],
+    },
+  },
+  {
+    from: 'ingest-consumer',
+    to: 'redis-buffers',
+    options: {
+      label: 'Caching event data',
+      labelpos: 'l',
+      styles: ['redis-buffers-flow'],
+    }
+  },
+  {
+    from: 'outer-space',
     to: 'web-worker',
     options: {
       label: 'Raw event data',
@@ -114,6 +179,18 @@ const edges = [
       description: `
         Source:
         <a href="https://github.com/getsentry/sentry/blob/824c03089907ad22a9282303a5eaca33989ce481/src/sentry/coreapi.py#L182">Scheduling "preprocess_event"</a>
+      `,
+      styles: ['main-flow'],
+    },
+  },
+  {
+    from: 'ingest-consumer',
+    to: 'task-preprocess-event',
+    options: {
+      label: 'Start task (inline)',
+      description: `
+        Source:
+        <a href="https://github.com/getsentry/sentry/blob/1d83d30693873cd9ebb0442df11920b72e78b8e1/src/sentry/ingest/ingest_consumer.py#L80">Calling "preprocess_event"</a>
       `,
       styles: ['main-flow'],
     },
@@ -166,6 +243,7 @@ const edges = [
         Source:
         <a href="https://github.com/getsentry/sentry/blob/37eb11f6b050fd019375002aed4cf1d8dff2b117/src/sentry/coreapi.py#L172">Saving event data</a>
       `,
+      labelpos: 'l',
       styles: ['redis-buffers-flow'],
     },
   },
@@ -191,7 +269,7 @@ const edges = [
     to: 'kafka-eventstream',
     options: {
       labelpos: 'c',
-      label: 'Publish to "events" topic                                    ',
+      label: 'Publish to "events" topic',
       styles: ['main-flow'],
     },
   },
