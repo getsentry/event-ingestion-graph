@@ -1,8 +1,8 @@
 import compose from "./compose";
-import {asin, atan2, cos, degrees, pi, radians, sin, tau} from "./math";
+import {abs, asin, atan2, cos, degrees, pi, radians, sin, tau} from "./math";
 
 function rotationIdentity(lambda, phi) {
-  return [lambda > pi ? lambda - tau : lambda < -pi ? lambda + tau : lambda, phi];
+  return [abs(lambda) > pi ? lambda + Math.round(-lambda / tau) * tau : lambda, phi];
 }
 
 rotationIdentity.invert = rotationIdentity;
