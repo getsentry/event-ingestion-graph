@@ -5,7 +5,7 @@ const states = {
     description: 'Clients that use Sentry SDKs',
     styles: ['comp-outer'],
   },
-  'relay': {
+  relay: {
     label: 'Relay (semaphore)',
     description: `
     Beginning of new path for event processing (alternative to "web worker (uwsgi)").
@@ -22,14 +22,15 @@ const states = {
         <a href="https://github.com/getsentry/semaphore/tree/ccacf2c343fc845107a34115d9d4839ad1b0afa5/general/src/store">store-specific normalization</a>)
       </li>
     </ul>
-    `
+    `,
   },
   'kafka-ingest-stream': {
     label: 'Kafka Ingest Stream',
     styles: ['comp-kafka'],
   },
   'ingest-consumer': {
-    description: 'responsible for consuming processed events from Relay. Runs <code>preprocess_event</code> synchronously (not as Celery task, but as function call)'
+    description:
+      'responsible for consuming processed events from Relay. Runs <code>preprocess_event</code> synchronously (not as Celery task, but as function call)',
   },
   'web-worker': {
     label: 'Web worker (uwsgi)',
@@ -61,11 +62,18 @@ const states = {
       stacktrace processing, plugin preprocessors (e.g. for
         <a href="https://github.com/getsentry/sentry/blob/37eb11f6b050fd019375002aed4cf1d8dff2b117/src/sentry/lang/javascript/plugin.py#L51">
           javascript
-        </a> we try to translate the error message)
+        </a> we try to apply source maps and translate the error message),
       <br><br>
       Source:
       <a href="https://github.com/getsentry/sentry/blob/37eb11f6b050fd019375002aed4cf1d8dff2b117/src/sentry/tasks/store.py#L205">process_event</a>
   `,
+    styles: ['comp-celery-task'],
+  },
+  'task-symbolicate-event': {
+    label: 'Task: symbolicate_event',
+    description: `
+      This task is handling symbolication (using the Symbolicator service) for events that require it (e.g. native events)
+    `,
     styles: ['comp-celery-task'],
   },
   'service-symbolicator': {label: 'Symbolicator'},
@@ -154,13 +162,13 @@ const edges = [
       label: 'Caching event data',
       labelpos: 'l',
       styles: ['redis-buffers-flow'],
-    }
+    },
   },
   {
     from: 'outer-space',
     to: 'web-worker',
     options: {
-      label: 'Raw event data',
+      label: 'Raw event data (legacy path)',
       description: `
         The data looks like this: <br>
         <pre>{"exception":{"values":[{"stacktrace":{"frames":
@@ -168,7 +176,6 @@ const edges = [
 "function":"?","in_app":true,"lineno":13}]},"type":
 "SyntaxError","value":"Use of const in strict mode." ...</pre>
       `,
-      styles: ['main-flow'],
     },
   },
   {
@@ -180,7 +187,6 @@ const edges = [
         Source:
         <a href="https://github.com/getsentry/sentry/blob/824c03089907ad22a9282303a5eaca33989ce481/src/sentry/coreapi.py#L182">Scheduling "preprocess_event"</a>
       `,
-      styles: ['main-flow'],
     },
   },
   {
@@ -208,7 +214,27 @@ const edges = [
     },
   },
   {
-    from: 'task-process-event',
+    from: 'task-preprocess-event',
+    to: 'task-symbolicate-event',
+    options: {
+      label: ' Start task',
+      description: `
+        TODO
+      `,
+    },
+  },
+  {
+    from: 'task-symbolicate-event',
+    to: 'task-process-event',
+    options: {
+      label: ' Start task',
+      description: `
+        TODO
+      `,
+    },
+  },
+  {
+    from: 'task-symbolicate-event',
     to: 'service-symbolicator',
     options: {
       label: 'Native symbolication',
