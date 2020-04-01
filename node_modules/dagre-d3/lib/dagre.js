@@ -2,10 +2,12 @@
 
 var dagre;
 
-if (require) {
+if (typeof require === "function") {
   try {
     dagre = require("dagre");
-  } catch (e) {}
+  } catch (e) {
+    // continue regardless of error
+  }
 }
 
 if (!dagre) {

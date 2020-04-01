@@ -2,10 +2,13 @@
 
 var graphlib;
 
-if (require) {
+if (typeof require === "function") {
   try {
     graphlib = require("graphlib");
-  } catch (e) {}
+  }
+  catch (e) {
+    // continue regardless of error
+  }
 }
 
 if (!graphlib) {
