@@ -32,20 +32,6 @@ const states = {
     description:
       'responsible for consuming processed events from Relay. Runs <code>preprocess_event</code> synchronously (not as Celery task, but as function call)',
   },
-  'web-worker': {
-    label: 'Web worker (uwsgi)',
-    description: `
-    Processes requests <i>synchronously</i>, i.e. without waiting for background tasks to finish.
-    Does some basic event checks, discards garbage data, and performs event normalization.
-    Returns the event ID.<br><br>
-      Sources:
-      <ul>
-      <li><a href="https://github.com/getsentry/sentry/blob/37eb11f6b050fd019375002aed4cf1d8dff2b117/src/sentry/web/api.py#L465">StoreView class</a></li>
-      <li><a href="https://github.com/getsentry/sentry/blob/37eb11f6b050fd019375002aed4cf1d8dff2b117/src/sentry/web/api.py#L532">Main processing function</a></li>
-      <li><a href="https://github.com/getsentry/sentry/blob/master/src/sentry/event_manager.py#L443">Normalization in EventManager</a></li>
-      </ul>`,
-    styles: ['comp-uwsgi', 'comp-sync'],
-  },
   'task-preprocess-event': {
     label: 'Task: preprocess_event',
     description: `
@@ -165,31 +151,6 @@ const edges = [
     },
   },
   {
-    from: 'outer-space',
-    to: 'web-worker',
-    options: {
-      label: 'Raw event data (legacy path)',
-      description: `
-        The data looks like this: <br>
-        <pre>{"exception":{"values":[{"stacktrace":{"frames":
-[{"colno":"12","filename":"http://test.com/f.js",
-"function":"?","in_app":true,"lineno":13}]},"type":
-"SyntaxError","value":"Use of const in strict mode." ...</pre>
-      `,
-    },
-  },
-  {
-    from: 'web-worker',
-    to: 'task-preprocess-event',
-    options: {
-      label: 'Start task',
-      description: `
-        Source:
-        <a href="https://github.com/getsentry/sentry/blob/824c03089907ad22a9282303a5eaca33989ce481/src/sentry/coreapi.py#L182">Scheduling "preprocess_event"</a>
-      `,
-    },
-  },
-  {
     from: 'ingest-consumer',
     to: 'task-preprocess-event',
     options: {
@@ -258,19 +219,6 @@ const edges = [
         <a href="https://github.com/getsentry/sentry/blob/37eb11f6b050fd019375002aed4cf1d8dff2b117/src/sentry/tasks/store.py#L193">Scheduling "save_event"</a>
       `,
       styles: ['main-flow'],
-    },
-  },
-  {
-    from: 'web-worker',
-    to: 'redis-buffers',
-    options: {
-      label: 'Caching event data',
-      description: `
-        Source:
-        <a href="https://github.com/getsentry/sentry/blob/37eb11f6b050fd019375002aed4cf1d8dff2b117/src/sentry/coreapi.py#L172">Saving event data</a>
-      `,
-      labelpos: 'l',
-      styles: ['redis-buffers-flow'],
     },
   },
   {
@@ -352,7 +300,7 @@ function addEdge(g, fromNode, toNode, options) {
 
 function prepareElements(g) {
   // Add states to the graph, set labels, and style
-  Object.keys(states).forEach(function(state) {
+  Object.keys(states).forEach(function (state) {
     const value = states[state];
     value.rx = value.ry = 5;
     if (value.styles && value.styles.length > 0) {
@@ -362,7 +310,7 @@ function prepareElements(g) {
   });
 
   // Add edges
-  edges.forEach(function(edgeParams) {
+  edges.forEach(function (edgeParams) {
     const options = {...edgeParams.options};
     if (options.styles && options.styles.length > 0) {
       options.class = options.styles.join(' ');
@@ -390,23 +338,23 @@ function addTooltips(inner, g) {
   // Add tooltips for nodes
   inner
     .selectAll('g.node')
-    .attr('title', v => {
+    .attr('title', (v) => {
       const node = g.node(v);
       return styleTooltip(node.label.trim(), node.description || '');
     })
-    .each(function(v) {
+    .each(function (v) {
       $(this).tipsy(tooltipOptions);
     });
 
   // Add tooltips for edges
   inner
     .selectAll('g.edgeLabel')
-    .attr('title', e => {
+    .attr('title', (e) => {
       const edge = g.edge(e);
 
       return styleTooltip(edge.label.trim(), edge.description || '');
     })
-    .each(function(e) {
+    .each(function (e) {
       $(this).tipsy(tooltipOptions);
     });
 }
