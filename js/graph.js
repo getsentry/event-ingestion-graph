@@ -6,20 +6,20 @@ const states = {
     styles: ['comp-outer'],
   },
   relay: {
-    label: 'Relay (semaphore)',
+    label: 'Relay',
     description: `
-    Beginning of new path for event processing (alternative to "web worker (uwsgi)").
+    Beginning of event processing.
 
     Processes incoming requests. Immediately returns a 200 or 429. Queues
     events in-memory <i>afterwards</i>, and does some basic checks:<br><br>
 
     <ul>
-      <li>Rate limits <a href="https://github.com/getsentry/semaphore/blob/ccacf2c343fc845107a34115d9d4839ad1b0afa5/server/src/quotas/redis.rs">(code)</a></li>
-      <li>Event filtering <a href="https://github.com/getsentry/semaphore/tree/ccacf2c343fc845107a34115d9d4839ad1b0afa5/general/src/filter">(code)</a></li>
+      <li>Rate limits <a href="https://github.com/getsentry/relay/tree/master/relay-quotas/src">(code)</a></li>
+      <li>Event filtering <a href="https://github.com/getsentry/relay/tree/master/relay-filter/src">(code)</a></li>
       <li>
         Schema validation/event normalization (code for
-        <a href="https://github.com/getsentry/semaphore/tree/ccacf2c343fc845107a34115d9d4839ad1b0afa5/general/src/protocol">schema definition</a>,
-        <a href="https://github.com/getsentry/semaphore/tree/ccacf2c343fc845107a34115d9d4839ad1b0afa5/general/src/store">store-specific normalization</a>)
+        <a href="https://github.com/getsentry/relay/tree/master/relay-event-schema/src/protocol">schema definition</a>,
+        <a href="https://github.com/getsentry/relay/tree/master/relay-event-normalization/src">store-specific normalization</a>)
       </li>
     </ul>
     `,
@@ -30,14 +30,15 @@ const states = {
   },
   'ingest-consumer': {
     description:
-      'responsible for consuming processed events from Relay. Runs <code>preprocess_event</code> synchronously (not as Celery task, but as function call)',
+      'responsible for consuming processed events from Relay. Runs <code>preprocess_event</code> synchronously (not as Celery task)',
   },
   'task-preprocess-event': {
     label: 'Task: preprocess_event',
     description: `
-      ??? TODO <br><br>
+      Detect whether an event requires symbolication or processing plugins. Will either spawn
+      a task to do symbolication/processing, or go to save_event.<br><br>
         Source:
-        <a href="https://github.com/getsentry/sentry/blob/37eb11f6b050fd019375002aed4cf1d8dff2b117/src/sentry/tasks/store.py#L97">preprocess_event</a>
+        <a href="https://github.com/getsentry/sentry/blob/3e4bf991a2eb2490cc81baeaf29d15ddb82a1692/src/sentry/tasks/store.py#L234">preprocess_event</a>
     `,
     styles: ['comp-celery-task'],
   },
@@ -46,12 +47,13 @@ const states = {
     description: `
       Here's what happens on this stage:
       stacktrace processing, plugin preprocessors (e.g. for
-        <a href="https://github.com/getsentry/sentry/blob/37eb11f6b050fd019375002aed4cf1d8dff2b117/src/sentry/lang/javascript/plugin.py#L51">
+        <a href="https://github.com/getsentry/sentry/blob/3e4bf991a2eb2490cc81baeaf29d15ddb82a1692/src/sentry/lang/javascript/plugin.py#L41">
           javascript
-        </a> we try to apply source maps and translate the error message),
+        </a> we try to apply source maps and translate the error message).
+      For Java stacktraces we apply proguard files here.
       <br><br>
       Source:
-      <a href="https://github.com/getsentry/sentry/blob/37eb11f6b050fd019375002aed4cf1d8dff2b117/src/sentry/tasks/store.py#L205">process_event</a>
+      <a href="https://github.com/getsentry/sentry/blob/3e4bf991a2eb2490cc81baeaf29d15ddb82a1692/src/sentry/tasks/store.py#L509">process_event</a>
   `,
     styles: ['comp-celery-task'],
   },
@@ -65,18 +67,22 @@ const states = {
   'service-symbolicator': {label: 'Symbolicator'},
   'task-save-event': {
     label: 'Task: save_event',
+    description: `
+      This task handle enriching event data and creating records for Environment, Release.
+      This task also saves the event to <code>nodestore</code>, and publishes to <code>eventstream</code>.
+    `,
     styles: ['comp-celery-task'],
   },
   'storage-nodestore': {
     label: 'Nodestore (Google Bigtable)',
+    description: `Key-value database of enriched SDK events indexed by eventid:projectid.`,
     styles: ['comp-database'],
   },
-  'redis-buffers': {
-    label: 'Redis Cache',
+  'processing-store': {
+    label: 'Eventprocessing Store (Redis)',
     description: `
       This cache is used to pass data between event processing stages. <br>
-      It is powered by <a href="https://github.com/getsentry/rb">RB</a> (Redis Blaster), and is not HA (Highly Available). <br><br>
-      This compenent is also known as <i>buffers</i> (in the infrastructure), and <i>default_cache</i> (in the code).
+      It is powered by Redis Cluster. <br><br>
     `,
     styles: ['comp-redis'],
   },
@@ -97,11 +103,23 @@ const states = {
   'post-process-forwarder': {
     description: `
     <i>post-process-forwarder</i> is responsible for waiting on snuba-consumer to commit writes to ClickHouse,
-    and subsequently fire off the post_process_group job to Celery.
+    and subsequently trigger the post_process_group Celery job.
     `,
   },
   'task-post-process-group': {
     label: 'Task: post_process_group',
+    description: `
+    Runs a variety of operations like:
+    <ul>
+      <li>Clearing snoozes</li>
+      <li>Detecting escalations</li>
+      <li>Processing commit data</li>
+      <li>Automatic assignment</li>
+      <li>Triggering Issue Alert Rules</li>
+      <li>Delivering webhooks and service hooks</li>
+      <li>Linking errors to replays, user-feedback and attachments.</li>
+    </ul>
+    `,
     styles: ['comp-celery-task'],
   },
   'database-clickhouse': {
@@ -143,7 +161,7 @@ const edges = [
   },
   {
     from: 'ingest-consumer',
-    to: 'redis-buffers',
+    to: 'processing-store',
     options: {
       label: 'Caching event data',
       labelpos: 'l',
@@ -169,7 +187,7 @@ const edges = [
       label: ' Start task',
       description: `
         Source:
-        <a href="https://github.com/getsentry/sentry/blob/37eb11f6b050fd019375002aed4cf1d8dff2b117/src/sentry/tasks/store.py#L78">Scheduling "process_event"</a>
+        <a href="https://github.com/getsentry/sentry/blob/3e4bf991a2eb2490cc81baeaf29d15ddb82a1692/src/sentry/tasks/store.py#L67">Scheduling "process_event"</a>
       `,
       styles: ['main-flow'],
     },
@@ -222,19 +240,19 @@ const edges = [
     },
   },
   {
-    from: 'redis-buffers',
+    from: 'processing-store',
     to: 'task-preprocess-event',
     options: {styles: ['redis-buffers-flow']},
   },
   {
-    from: 'redis-buffers',
+    from: 'processing-store',
     to: 'task-process-event',
     options: {
       styles: ['redis-buffers-flow'],
     },
   },
   {
-    from: 'redis-buffers',
+    from: 'processing-store',
     to: 'task-save-event',
     options: {styles: ['redis-buffers-flow']},
   },

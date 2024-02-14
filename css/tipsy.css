@@ -1,7 +1,7 @@
 /* Taken from https://github.com/atlassian/tipsy/blob/5aeef88e1856240f4a341119d326beb6af269f97/src/stylesheets/tipsy.css */
 
 .tipsy {
-  font-size: 10px;
+  font-size: 11px;
   position: absolute;
   padding: 5px;
   word-wrap: break-word;
